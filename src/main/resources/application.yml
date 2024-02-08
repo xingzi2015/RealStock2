@@ -1,0 +1,17 @@
+stock:
+  accountEntities:
+    - userId: 1
+      money: 10000000000000
+      initStocks:
+        - SH01,100000
+    - userId: robot_random1
+      money: 100000000
+      initStocks:
+        - SH01,10000000
+    - userId: robot_random2
+      money: 100000000
+      initStocks:
+        - SH01,10000000
+  stockEntities:
+    - stockCode: SH01
+      lastPrice: 1000
