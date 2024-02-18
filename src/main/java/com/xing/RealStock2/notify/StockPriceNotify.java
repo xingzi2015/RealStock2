@@ -7,6 +7,7 @@ import com.xing.RealStock2.entity.TradeSideEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
@@ -18,13 +19,16 @@ public class StockPriceNotify implements GlobalNotify{
         //设置价格
         stockEntity.updatePrice(tradeMsg.getTransactionPrice());
         stockEntity.getStockDetailEntity().getTradeOnDayMessages().add(tradeMsg);
+
+        updatePriceMap(tradeSide, tradeMsg.getTransactionPrice(),tradeMsg.getAmount(), stockEntity);
     }
 
 
     @Override
-    public void notifyMatching(String stockCode,Integer price) {
+    public void notifyPreMatching(String stockCode, Integer price) {
         StockEntity stockEntity = StockContext.getStockEntityMap().get(stockCode);
         stockEntity.updatePrice(price);
+        stockEntity.getStockDetailEntity().getTradeOnDayMessages().add(TradeMsg.builder().stockCode(stockCode).transactionPrice(price).amount(0L).dateTime(LocalDateTime.now()).build());
     }
 
     @Override
@@ -54,14 +58,23 @@ public class StockPriceNotify implements GlobalNotify{
     @Override
     public void notifyCancel(TradeSideEnum tradeSide, TradeMsg tradeMsg) {
         StockEntity stockEntity = StockContext.getStockEntityMap().get(tradeMsg.getStockCode());
-        if(tradeSide==TradeSideEnum.BUY){
-            stockEntity.getStockDetailEntity().getBuyPriceMap().putIfAbsent(tradeMsg.getIntendPrice(),new AtomicLong(0));
-            stockEntity.getStockDetailEntity().getBuyPriceMap().get(tradeMsg.getIntendPrice()).addAndGet(-1*tradeMsg.getAmount());
-        }else if(tradeSide==TradeSideEnum.SELL){
-            stockEntity.getStockDetailEntity().getSellPriceMap().putIfAbsent(tradeMsg.getIntendPrice(),new AtomicLong(0));
-            stockEntity.getStockDetailEntity().getSellPriceMap().get(tradeMsg.getIntendPrice()).addAndGet(-1*tradeMsg.getAmount());
-        }else{
-            log.error("异常场景, tradeSide="+tradeSide.name());
+        updatePriceMap(tradeSide, tradeMsg.getIntendPrice(),tradeMsg.getAmount(), stockEntity);
+    }
+
+    private static void updatePriceMap(TradeSideEnum tradeSide, Integer price,Long amount, StockEntity stockEntity) {
+        try{
+            if(tradeSide ==TradeSideEnum.BUY){
+                stockEntity.getStockDetailEntity().getBuyPriceMap().putIfAbsent(price,new AtomicLong(0));
+                stockEntity.getStockDetailEntity().getBuyPriceMap().get(price).addAndGet(-1* amount);
+            }else if(tradeSide ==TradeSideEnum.SELL){
+                stockEntity.getStockDetailEntity().getSellPriceMap().putIfAbsent(price,new AtomicLong(0));
+                stockEntity.getStockDetailEntity().getSellPriceMap().get(price).addAndGet(-1* amount);
+            }else{
+                log.error("异常场景, tradeSide="+ tradeSide.name());
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
+
     }
 }

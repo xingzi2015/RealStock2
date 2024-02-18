@@ -49,19 +49,19 @@ public class ScheduleService {
             try {
                 log.info("集合竞价1");
                 callAuction1();
-                Thread.sleep(10000);
+                Thread.sleep(5000);
                 log.info("连续竞价");
                 callContinuous();
-                Thread.sleep(30000);
-//                log.info("集合竞价2");
-//                callAuction2();
-//                Thread.sleep(10000);
-//                log.info("结束当天交易");
-//                finishDailyStock();
-//                Thread.sleep(2000);
+                Thread.sleep(40000);
+                log.info("集合竞价2");
+                callAuction2();
+                Thread.sleep(5000);
+                log.info("结束当天交易");
+                finishDailyStock();
+                Thread.sleep(5000);
+                StockContext.setExchangeStateEnum(ExchangeStateEnum.CLOSE);
+                Thread.sleep(3000);
 
-break;
-//                Thread.sleep(999999);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -70,7 +70,7 @@ break;
 
     private void callAuction1() {
         StockContext.setExchangeStateEnum(ExchangeStateEnum.PAUSE);
-
+        StockContext.pauseClear();
         StockContext.dailyClear();
         StockContext.setExchangeStateEnum(ExchangeStateEnum.CALL_AUCTION);
     }
@@ -79,6 +79,7 @@ break;
         StockContext.setExchangeStateEnum(ExchangeStateEnum.PAUSE);
         Thread.sleep(1000);
         callAuctionEngine.matching();
+        StockContext.pauseClear();
         callAuctionEngine.moveToContinous();
         callAuctionEngine.dailyClear();
         StockContext.setExchangeStateEnum(ExchangeStateEnum.CONTINUOUS_AUCTION);
@@ -86,6 +87,7 @@ break;
     private void callAuction2() throws InterruptedException {
         StockContext.setExchangeStateEnum(ExchangeStateEnum.PAUSE);
         Thread.sleep(1000);
+        StockContext.pauseClear();
         continuousAuctionEngine.dailyClear();
         StockContext.setExchangeStateEnum(ExchangeStateEnum.CALL_AUCTION);
     }
@@ -95,6 +97,5 @@ break;
         callAuctionEngine.matching();
         callAuctionEngine.dailyClear();
         StockContext.dailyClear();
-        StockContext.setExchangeStateEnum(ExchangeStateEnum.CLOSE);
     }
 }

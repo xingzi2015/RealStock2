@@ -19,12 +19,15 @@ public class RandomRobot implements Robot{
     private TradeSuccessNotify tradeSuccessNotify;
 
     public void operate(String userId){
-        if(ExchangeStateEnum.isOpen(StockContext.getExchangeStateEnum())){
+        if(StockContext.getExchangeStateEnum().isOpen()){
             for(StockEntity stockEntity:StockContext.getStockEntityMap().values()){
+                int price=RandomGenerator.generateRandomPrice(stockEntity.getNowPrice().get());
+                price=Math.min(price,stockEntity.getMaxPrice());
+                price=Math.max(price,stockEntity.getMinPrice());
                 TradeEntity tradeEntity = TradeEntity.builder()
                         .stockCode(stockEntity.getStockCode())
                         .userId(userId)
-                        .price(RandomGenerator.generateRandomPrice(stockEntity.getNowPrice().get()))
+                        .price(price)
                         .amount(RandomGenerator.generateRandomVolume(1000))
                         .tradeNotify(tradeSuccessNotify)
                         .build();

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PriceFilter implements StockFilter{
-    private static final Integer limitRate=10;
     @Override
     public ResultEntity doFilter(TradeEntity tradeEntity) {
         StockEntity stockEntity=StockContext.getStockEntityMap().get(tradeEntity.getStockCode());
@@ -16,17 +15,15 @@ public class PriceFilter implements StockFilter{
 
         if (stockEntity != null) {
             Integer lastPrice = stockEntity.getLastPrice();
-            Integer upperLimit = lastPrice*(100+limitRate)/100;
-            Integer lowerLimit =lastPrice*(100-limitRate)/100;
             //主动买场景
             if(tradeEntity.isActiveBuy()){
-                tradeEntity.setPrice(upperLimit);
+                tradeEntity.setPrice(stockEntity.getMaxPrice());
                 return new ResultEntity(true);
             }
             Integer currentPrice = tradeEntity.getPrice();
             if (currentPrice != null) {
                 // 检查价格是否超过昨日价格的1.1倍或者低于昨日价格的0.9倍
-                if (currentPrice.compareTo(upperLimit) > 0 || currentPrice.compareTo(lowerLimit) < 0) {
+                if (currentPrice.compareTo(stockEntity.getMaxPrice()) > 0 || currentPrice.compareTo(stockEntity.getMinPrice()) < 0) {
                     return new ResultEntity(false,"成交价过高或过低"+currentPrice); // 不满足过滤条件，返回false
                 }
             }

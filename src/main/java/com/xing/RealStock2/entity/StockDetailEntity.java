@@ -49,4 +49,9 @@ public class StockDetailEntity implements DailyClear {
         checkPrice();
         resfresh();
     }
+
+    public void pauseClear(){
+        buyPriceMap= new ConcurrentSkipListMap<>();
+        sellPriceMap=new ConcurrentSkipListMap<>();
+    }
 }

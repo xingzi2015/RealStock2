@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class ExchangeFilter implements StockFilter{
     @Override
     public ResultEntity doFilter(TradeEntity tradeEntity) {
-        if(ExchangeStateEnum.isOpen(StockContext.getExchangeStateEnum())){
+        if(StockContext.getExchangeStateEnum().isOpen()){
             return new ResultEntity(true);
         }
         return new ResultEntity(false,"交易暂停");

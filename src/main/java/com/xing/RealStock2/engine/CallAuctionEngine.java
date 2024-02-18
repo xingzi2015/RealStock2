@@ -1,7 +1,6 @@
 package com.xing.RealStock2.engine;
 
 import com.xing.RealStock2.common.DailyClear;
-import com.xing.RealStock2.context.StockContext;
 import com.xing.RealStock2.entity.*;
 import com.xing.RealStock2.filter.BuyFilter;
 import com.xing.RealStock2.filter.SellFilter;
@@ -15,8 +14,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
@@ -109,7 +106,7 @@ public class CallAuctionEngine implements AuctionEngine, DailyClear {
         sellTradeEntity.getTradeNotify().notifyWaitingMatch(sellTradeEntity);
         if(tryMatching(stockCode, sellPrice,TradeSideEnum.SELL)){
             globalNotifies.forEach(n->n.callNotifyWaitingMatch(
-                    stockCode,matchingPriceMap.get(stockCode).get(), matchingSellAmountMap.get(stockCode), matchingSellAmountMap.get(stockCode))
+                    stockCode,matchingPriceMap.get(stockCode).get(), matchingBuyAmountMap.get(stockCode), matchingSellAmountMap.get(stockCode))
             );
         }
 
@@ -173,9 +170,8 @@ public class CallAuctionEngine implements AuctionEngine, DailyClear {
         matchingPriceMap.get(stockCode).set(lastPrice);
         matchingBuyAmountMap.put(stockCode, lastBuyAmount);
         matchingSellAmountMap.put(stockCode, lastSellAmount);
-
         int finalLastPrice = lastPrice;
-        globalNotifies.forEach(t->t.notifyMatching(stockCode, finalLastPrice));
+        globalNotifies.forEach(t->t.notifyPreMatching(stockCode, finalLastPrice));
         return Math.min(lastBuyAmount,lastSellAmount)>0;
     }
 

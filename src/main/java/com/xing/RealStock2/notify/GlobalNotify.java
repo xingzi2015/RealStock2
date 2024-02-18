@@ -11,7 +11,7 @@ public interface GlobalNotify {
      */
     void notifyMatching(TradeSideEnum tradeSide, TradeMsg tradeMsg);
 
-    void notifyMatching(String stockCode,Integer price);
+    void notifyPreMatching(String stockCode, Integer price);
 
     void continousNotifyWaitingMatch(TradeSideEnum tradeSide, TradeMsg tradeMsg);
 

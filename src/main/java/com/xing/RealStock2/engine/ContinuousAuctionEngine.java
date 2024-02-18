@@ -18,8 +18,6 @@ import org.springframework.util.CollectionUtils;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
@@ -67,11 +65,11 @@ public class ContinuousAuctionEngine implements AuctionEngine, DailyClear {
 
         PriorityQueue<TradeEntity> sellTradeEntities=sellTradeEntitiesMap.get(buyTradeEntity.getStockCode());
         while (!CollectionUtils.isEmpty(sellTradeEntities)){
-            TradeEntity peeKTradeEntity = peek(sellTradeEntities);
-            if (peeKTradeEntity==null) break;
-            long tradeAmount = match(buyTradeEntity, peeKTradeEntity);
+            TradeEntity peekTradeEntity = peek(sellTradeEntities);
+            if (peekTradeEntity==null) break;
+            long tradeAmount = match(buyTradeEntity, peekTradeEntity);
             if (tradeAmount<=0) break;
-            if( buyTradeEntity.minusAmount(tradeAmount) && peeKTradeEntity.minusAmount(tradeAmount)){
+            if( buyTradeEntity.minusAmount(tradeAmount) && peekTradeEntity.minusAmount(tradeAmount)){
                 TradeEntity sellTradeEntity= sellTradeEntities.peek();
                 assert sellTradeEntity != null;
                 LocalDateTime now = LocalDateTime.now();
@@ -82,15 +80,22 @@ public class ContinuousAuctionEngine implements AuctionEngine, DailyClear {
 
         }
         if(buyTradeEntity.getAmount()>0){
-            buyTradeEntitiesMap.putIfAbsent(buyTradeEntity.getStockCode(),new PriorityQueue<>(Comparator.comparingInt(TradeEntity::getPrice).reversed()));
+            buyTradeEntitiesMap.putIfAbsent(buyTradeEntity.getStockCode(),generateBuyQueue());
             buyTradeEntitiesMap.get(buyTradeEntity.getStockCode()).add(buyTradeEntity);
             TradeMsg tradeMsg = TradeMsg.builder().stockCode(buyTradeEntity.getStockCode()).intendPrice(buyTradeEntity.getPrice()).amount(buyTradeEntity.getAmount()).dateTime(LocalDateTime.now()).build();
-            globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.SELL,tradeMsg));
+            globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.BUY,tradeMsg));
             buyTradeEntity.getTradeNotify().notifyWaitingMatch(buyTradeEntity);
             return new ResultEntity(true,buyTradeEntity);
         }
 
         return new ResultEntity(true);
+    }
+
+    private PriorityQueue<TradeEntity> generateBuyQueue(){
+        return new PriorityQueue<>(Comparator.comparingInt(TradeEntity::getPrice).reversed());
+    }
+    private PriorityQueue<TradeEntity> generateSellQueue(){
+        return new PriorityQueue<>();
     }
 
     @Override
@@ -108,6 +113,7 @@ public class ContinuousAuctionEngine implements AuctionEngine, DailyClear {
         PriorityQueue<TradeEntity> buyTradeEntities=buyTradeEntitiesMap.get(sellTradeEntity.getStockCode());
         while (!CollectionUtils.isEmpty(buyTradeEntities)){
             TradeEntity peekTradeEntity = peek(buyTradeEntities);
+            if (peekTradeEntity==null) break;
             long tradeAmount = match(peekTradeEntity, sellTradeEntity);
             if (tradeAmount<=0) break;
             if(peekTradeEntity.minusAmount(tradeAmount) && sellTradeEntity.minusAmount(tradeAmount)){
@@ -119,7 +125,7 @@ public class ContinuousAuctionEngine implements AuctionEngine, DailyClear {
             }
         }
         if(sellTradeEntity.getAmount()>0){
-            sellTradeEntitiesMap.putIfAbsent(sellTradeEntity.getStockCode(),new PriorityQueue<>());
+            sellTradeEntitiesMap.putIfAbsent(sellTradeEntity.getStockCode(),generateSellQueue());
             sellTradeEntitiesMap.get(sellTradeEntity.getStockCode()).add(sellTradeEntity);
             TradeMsg tradeMsg = TradeMsg.builder().stockCode(sellTradeEntity.getStockCode()).intendPrice(sellTradeEntity.getPrice()).amount(sellTradeEntity.getAmount()).dateTime(LocalDateTime.now()).build();
             globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.SELL,tradeMsg));
@@ -145,16 +151,17 @@ public class ContinuousAuctionEngine implements AuctionEngine, DailyClear {
 
     public synchronized ResultEntity move(TradeEntity tradeEntity){
         if(tradeEntity.getTradeSide()==TradeSideEnum.BUY){
-            buyTradeEntitiesMap.putIfAbsent(tradeEntity.getStockCode(),new PriorityQueue<>(Comparator.comparingInt(TradeEntity::getPrice).reversed()));
+            buyTradeEntitiesMap.putIfAbsent(tradeEntity.getStockCode(),generateBuyQueue());
             buyTradeEntitiesMap.get(tradeEntity.getStockCode()).add(tradeEntity);
             TradeMsg tradeMsg = TradeMsg.builder().stockCode(tradeEntity.getStockCode()).intendPrice(tradeEntity.getPrice()).amount(tradeEntity.getAmount()).dateTime(LocalDateTime.now()).build();
-            globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.SELL,tradeMsg));
+            globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.BUY,tradeMsg));
         }else {
-            sellTradeEntitiesMap.putIfAbsent(tradeEntity.getStockCode(),new PriorityQueue<>());
+            sellTradeEntitiesMap.putIfAbsent(tradeEntity.getStockCode(),generateSellQueue());
             sellTradeEntitiesMap.get(tradeEntity.getStockCode()).add(tradeEntity);
             TradeMsg tradeMsg = TradeMsg.builder().stockCode(tradeEntity.getStockCode()).intendPrice(tradeEntity.getPrice()).amount(tradeEntity.getAmount()).dateTime(LocalDateTime.now()).build();
             globalNotifies.forEach(t->t.continousNotifyWaitingMatch(TradeSideEnum.SELL,tradeMsg));
         }
+        tradeEntity.getTradeNotify().notifyWaitingMatch(tradeEntity);
         return new ResultEntity(true,tradeEntity);
     }
     private Long match(TradeEntity buyTradeEntity,TradeEntity sellTradeEntity){

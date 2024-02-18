@@ -6,8 +6,12 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -20,6 +24,11 @@ public class StockEntity implements DailyClear {
     private AtomicInteger nowPrice;
 
     private Integer lastPrice;
+    private Integer maxPrice;
+    private Integer minPrice;
+
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
     private AtomicInteger highestPrice;
 
@@ -47,8 +56,12 @@ public class StockEntity implements DailyClear {
         }else {
             this.nowPrice.set(this.lastPrice);
         }
+        this.maxPrice= (int) (this.lastPrice*1.1);
+        this.minPrice= (int) (this.lastPrice*0.9);
         stockHistoryEntities = new ArrayList<>();
         stockDetailEntity=new StockDetailEntity(this.stockCode);
+        startTime=LocalDateTime.now();
+        endTime= startTime.plusSeconds(50);
     }
 
 
@@ -60,6 +73,7 @@ public class StockEntity implements DailyClear {
 
     @Override
     public void dailyClear() {
+        this.lastPrice=nowPrice.get();
         this.stockHistoryEntities.add(StockEntity.builder()
                 .lastPrice(this.lastPrice)
                 .nowPrice(this.nowPrice)
